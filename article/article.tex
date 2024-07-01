@@ -12,13 +12,15 @@
 %for enabling a two-column layout for the author/affilation part (only applicable for > 6 authors), use "authorcolumns"
 %for producing a PDF according the PDF/A standard, add "pdfa"
 
-%\pdfoutput=1 %uncomment to ensure pdflatex processing (mandatatory e.g. to submit to arXiv)
-%\hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
+% \pdfoutput=1 %uncomment to ensure pdflatex processing (mandatatory e.g. to submit to arXiv)
+\hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
+\nolinenumbers
 
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepgfplotslibrary{statistics, units, groupplots}
 
+\usepackage{subcaption}
 
 \pgfplotsset{
     only if/.style args={entry of #1 is #2}{
@@ -53,7 +55,7 @@
 
 \Copyright{Paul Open Access} %TODO mandatory, please use full first names. LIPIcs license is "CC-BY";  http://creativecommons.org/licenses/by/3.0/
 
-\ccsdesc[100]{\textcolor{red}{Replace ccsdesc macro with valid one}} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
+\ccsdesc[100]{Theory of computation~Data structures design and analysis} %TODO mandatory: Please choose ACM 2012 classifications from https://dl.acm.org/ccs/ccs_flat.cfm 
 
 \keywords{Bit Vectors} %TODO mandatory; please add comma-separated list of keywords
 
@@ -91,20 +93,28 @@
 
 \maketitle
 
-%TODO mandatory: add short abstract of the document
 \begin{abstract}
+We introduce an interleaved data structure optimized for CPU cache efficiency to implement \code{rank},
+\code{select}, and \code{access} operations. This structure stores vector data and metadata within a
+512-bit cache line, using 64-bit blocks. Metadata, as an incremental sum of set bits, supports fast 
+rank and select operations with a 12.5\% memory overhead.
+The \code{rank} operation achieves constant execution time, by using incremental sums and pop counts.
+The \code{select} operation locates the nth bit occurrence via binary search on metadata and linear search,
+aided by a byte-level lookup table.
+Performance evaluation confirms that pre-computation scales linearly with vector size and \code{select}
+execution scales logarithmic, with variations in speed depending on CPU architecture.
 \end{abstract}
 
 \section{Algorithm}
-In the following section we will present two main data structures which implement the bit vector
-operations 
-
-\subsection{Interleaved}
+In the following section we will present an interleaved datastructure
+that implements \code{rank}, \code{select} and \code{access} operations.
 The interleaved data structure aims to use the CPU cache as efficiently as possible, where both
 vector information and metadata should fit in the same cache line of 512 bit.
-Our bit vector implementation consists of \code{uint64} blocks, of which we could fit 8 inside one cache line.
+Our bit vector implementation consists of \code{uint64} blocks, of which we can fit 8 inside one cache line
+$L_i = (\prevsum, \vec{v}_0, \dots, \vec{v}_6)$.
 To speed up the computation of rank and select we need metadata, which we store in the first
-64 bits of the line. This data structure is depicted in Figure~\ref{fig:interleaved}. 
+64 bits of the line.
+This data structure is depicted in Figure~\ref{fig:interleaved}. 
 This leaves us with a memory overhead of $12.5\%$. The used metadata $\prevsum$ is an incremental sum of previous bits
 set to one. For an efficient build time of the data structure we make use of the pop count $c(\vec{v})$
 instruction, which counts the number of 1 bits in a subvector $\vec{v}$, in our case an \code{uint64} number.
@@ -138,28 +148,33 @@ instruction, which counts the number of 1 bits in a subvector $\vec{v}$, in our 
     \label{fig:interleaved}    
 \end{figure}
 
-\subsubsection{Rank}
+\subsection{Rank}
 The \code{rank} operation is defined as $\text{rank}(\alpha, p) \mapsto n$, where $\alpha \in \{0,1\}$
 and $p,n \in \mathbb{N}_0$. Where $n$ is the number of $\alpha$ valued bits set before position $p$.
-To calculate $n$ for a given $\alpha, p$ we first have to calculate the vector line where the Prev. Sum
-is stored. Then we can use bit masks and the pop count operation to count the missing 1 bits.
+To calculate $n$ for a given $\alpha, p$ we first have to find the vector line $L_i$ where the
+previous sum $\prevsum$ is stored, by calculating $i=\frac{p}{64 \cdot 7}$.
+Using $j = \frac{p}{64} \mod 7$ we then know how many subvectors $\vec{v}$ we need to add to $\prevsum$.
+Then we can use bit masks and the pop count operation to count the missing 1 bits.
 $$
-    n' = \prevsum + \sum_{i=0}^{j-1}c(\vec{v}_i) + c(\text{masked}(\vec{v}_j)) 
+    n' = \prevsum + \sum_{s=0}^{j-1}c(\vec{v}_s) + c(\text{masked}_{m}(\vec{v}_j))\\
 $$
-We need to execute 7 pop count operations at most, but since everything fits into one cache line
-we don't need to load additional information from memory. With $\alpha = 1: n = n'$ for $\alpha = 0: n = p - n'$.
+Where $m = p \mod 64$, With $\alpha = 1: n = n'$ for $\alpha = 0: n = p - n'$.
+Considering the runtime, we need to execute 7 pop count operations at most, since $0 \leq j \leq 6$.
+Resulting in a constant execution time.
+Since everything fits into one cache line we don't need to load additional information from memory,
+which should improve performance.
 
-\subsubsection{Select}
-The \code{select} operation is defined as $\text{select}(\alpha, n) \mapsto p$, where $p$ is the position
+\subsection{Select}
+The \code{select} operation is defined as $\text{select}(\alpha, n) \mapsto p$, where $n \in \mathbb{N}$ and $p$ is the position
 of the $n$th $\alpha$ valued bit. With the interleaved data structure we use the incremental sum
-to find the vector line with the biggest prev. sum $< n$ using a binary search.
-The following vectors $\vec{v}_i$ will therefore contain the $n$th $\alpha$ bit.
+to find the vector line with the biggest prev. sum $\prevsum < n$ using a binary search.
+The following subvectors $\vec{v}_i$ will therefore contain the $n$th $\alpha$ bit.
 To find the position we conduct a linear search utilizing pop count, selecting the first
 $\vec{v}_i$ where $c(\vec{v}_i) \geq n$. Next we divide $\vec{v}_i$ into byte sized blocks to apply 
 the same linear search to find the byte containing the $n$th bit.
 To get the position inside the byte we created a lookup table, which is described further in Section~\ref{p:select_lookup}.
 
-\paragraph{Select lookup table}
+\subsubsection{Select lookup table}
 \label{p:select_lookup}
 For a fast select lookup we created a lookup table, consisting of 8 columns for each bit,
 as well as 256 rows for each possible byte.
@@ -197,9 +212,6 @@ As this information is constant we included the table as a constant array in the
     \label{fig:select_lookup}
 \end{figure}
 
-
-\section{Evolution}
-
 \section{Evaluation}
 In this chapter we will evaluate our predicted runtime against measurements.
 For the pre-computation we calculate an incremental sum $\prevsum$ every 7 blocks of 64 bits.
@@ -207,108 +219,28 @@ This should scale linearly with the vector size $|\vec{V}|=n$.
 As for \code{rank} we can calculate the position of the vector line in constant time.
 For \code{select} we need to first run a binary search in $\mathcal{O}(\log{n})$ to find the vector line.
 After that we compute a linear search in $\mathcal{O}(7)$ as there is a maximum of 7 blocks we need to search.
-The runtime will be dominated by the binary search after a certain time.
-In Figure~\ref{fig:performance_eval} we can validate these predictions.
-
+The runtime should be dominated by the binary search.
+To validate these predictions we conducted an experiment were a bitvector $\vec{V}$ with increasing
+size was randomly generated as well as a fixed amount of $100 000$ commands.
+We then measured the runtime for the pre-computation as well as the command execution.
+In Figure~\ref{fig:performance_eval} the recorded data is visualized.
 \begin{figure}[htbp]
     \centering
-    \begin{tikzpicture}    
-        \begin{axis}[
-            legend columns=3,
-            width=\textwidth*0.9,
-            height=7cm,
-            ymode=log,
-            log basis y=10,
-            ylabel={runtime},
-            xlabel={vector size},
-            y SI prefix=milli,
-            y unit=s,
-            every axis legend/.append style={
-                at={(0.5,1.03)},
-                anchor=south
-            }, 
-            xmin=28,
-            xticklabel={$2^{\pgfmathparse{\tick}\pgfmathprintnumber{\pgfmathresult}}$},
-            enlarge x limits=auto,
-            grid=both,
-            tick align=outside,
-            tickpos=left,
-        ]
-            \addplot [
-                mark=+,
-                error bars/.cd,
-                    y dir=both,
-                    y explicit,
-            ] table [x=bits,y=mean,y error=error] {errorplot.dat};
-            \addlegendentry{Runtime}
-    
-            \addplot [
-                mark=+,
-                color=red,
-                error bars/.cd,
-                    y dir=both,
-                    y explicit,
-            ] table [x=bits,y=commandMean,y error=commandError] {errorplot.dat};
-            \addlegendentry{Command Execution}
-    
-            \addplot [
-                mark=+,
-                color=blue,
-                error bars/.cd,
-                    y dir=both,
-                    y explicit,
-            ] table [x=bits,y=precomMean,y error=precomError] {errorplot.dat};
-            \addlegendentry{Precomputation}
-        \end{axis} 
-    \end{tikzpicture}
-    \caption{Performance Evaluation of an increasing vector size and a constant 100 000 commands.}
+    \input{images/benchmark.tex}
+    \caption{%
+        Performance Evaluation of an increasing vector size and a constant 100 000 commands.
+        The benchmark was run on both:
+        a 12th Gen Intel® Core™ i5-1240P × 16 with 32 GiB RAM, 1 TB SSD running Fedora Linux 40
+        and on a dedicated vCPU Server (Hetzner CCX33) with 
+        8 Cores, 32 GiB RAM and 240 GiB SSD running on AMD Milan EPYC™ 7003 or AMD Genoa EPYC™ 9654
+        running Ubuntu 24.04.
+    }
     \label{fig:performance_eval}
 \end{figure}
-
-
-% \begin{tikzpicture}
-% 	\begin{axis}[
-%         boxplot,
-% 		boxplot/draw direction=y,
-% 		ylabel={runtime},
-%         y SI prefix=milli,y unit=s,
-%         xmin=0,
-%         xticklabel={$2^{\pgfmathparse{8+\tick}\pgfmathprintnumber{\pgfmathresult}}$},
-%         % x tick label as interval,
-%         xlabel={vector length},
-% 	]
-    
-%     % \addplot table[y=time, only if={entry of bits is 31}]{benchmark.dat}; 
-%     % \addplot table[y=time, only if={entry of bits is 32}]{benchmark.dat}; 
-%     \pgfplotsinvokeforeach{8,...,32}{ 
-%         \addplot table[y=time,x=bits,only if={entry of bits is #1}]{benchmark.dat}; 
-%         % \addlegendentry{Cond. $2^{#1}$};
-%     } 
-
-
-% 	\end{axis}
-%     \begin{axis}[
-%         boxplot,
-% 		boxplot/draw direction=y,
-% 		ylabel={runtime},
-%         y SI prefix=milli,y unit=s,
-%         xmin=0,
-%         xticklabel={$2^{\pgfmathparse{8+\tick}\pgfmathprintnumber{\pgfmathresult}}$},
-%         % x tick label as interval,
-%         xlabel={vector length},
-% 	]
-    
-%     % \addplot table[y=time, only if={entry of bits is 31}]{benchmark.dat}; 
-%     % \addplot table[y=time, only if={entry of bits is 32}]{benchmark.dat}; 
-%     \pgfplotsinvokeforeach{8,...,32}{ 
-%         \addplot table[y=time,x=bits,only if={entry of bits is #1}]{benchmark.dat}; 
-%         % \addlegendentry{Cond. $2^{#1}$};
-%      } 
-
-        
-%     \end{axis}
-% \end{tikzpicture}
-
+Analyzing our data we can confirm the predicted runtime, where the pre-computation scales linearly
+with the vector length, and the command execution time scaling logarithmic.
+We also notice that the pre-computation on the AMD setup being faster while the command execution being
+slower in comparison to the Intel setup.
 
 %%
 %% Bibliography
@@ -316,7 +248,7 @@ In Figure~\ref{fig:performance_eval} we can validate these predictions.
 
 %% Please use bibtex, 
 
-\bibliography{lipics-v2021-sample-article}
+% \bibliography{lipics-v2021-sample-article}
 
 \appendix
 

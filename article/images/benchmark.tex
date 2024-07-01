@@ -1,0 +1,96 @@
+\begin{tikzpicture}
+    \begin{groupplot}[group style={group size= 2 by 1},height=6cm,width=.45\textwidth]
+        \nextgroupplot[
+            legend columns=-1,
+            legend to name=usageLegend,
+            ymin=1,
+            ymax=1000,
+            ymode=log,
+            log basis y=10,
+            ylabel={runtime},
+            xlabel={vector size},
+            y SI prefix=milli,
+            y unit=s,
+            xmin=27,
+            xticklabel={$2^{\pgfmathparse{\tick}\pgfmathprintnumber{\pgfmathresult}}$},
+            enlarge x limits=auto,
+            grid=both,
+            tick align=outside,
+            tickpos=left,
+            title=Intel,
+        ]
+        \addplot [
+            mark=+,
+            error bars/.cd,
+                y dir=both,
+                y explicit,
+        ] table [x=bits,y=mean,y error=error] {benchmarks/framework.dat};
+        \addlegendentry{Runtime}
+                
+        \addplot [
+            mark=+,
+            color=red,
+            error bars/.cd,
+                y dir=both,
+                y explicit,
+        ] table [x=bits,y=commandMean,y error=commandError] {benchmarks/framework.dat};
+        \addlegendentry{Command Execution}
+
+        \addplot [
+            mark=+,
+            color=blue,
+            error bars/.cd,
+                y dir=both,
+                y explicit,
+        ] table [x=bits,y=precomMean,y error=precomError] {benchmarks/framework.dat};
+        \addlegendentry{Precomputation}
+
+        \coordinate (topleft) at (rel axis cs:0,1);% coordinate at top of the first plot
+
+        \nextgroupplot[
+            ymode=log,
+            ymin=1,
+            ymax=1000,
+            log basis y=10,
+            xlabel={vector size},
+            xmin=27,
+            yticklabel=\empty,
+            xticklabel={$2^{\pgfmathparse{\tick}\pgfmathprintnumber{\pgfmathresult}}$},
+            enlarge x limits=auto,
+            grid=both,
+            tick align=outside,
+            tickpos=left,
+            title=AMD,
+        ]
+
+        \addplot [
+                mark=+,
+                color=black,
+                error bars/.cd,
+                    y dir=both,
+                    y explicit,
+            ] table [x=bits,y=mean,y error=error] {benchmarks/hetzner.dat};
+                    
+            \addplot [
+                mark=+,
+                color=red,
+                error bars/.cd,
+                    y dir=both,
+                    y explicit,
+            ] table [x=bits,y=commandMean,y error=commandError] {benchmarks/hetzner.dat};
+
+            \addplot [
+                mark=+,
+                color=blue,
+                error bars/.cd,
+                    y dir=both,
+                    y explicit,
+            ] table [x=bits,y=precomMean,y error=precomError] {benchmarks/hetzner.dat};
+
+        \coordinate (topright) at (rel axis cs:1,1);% coordinate at top of the second plot
+        
+
+    \end{groupplot}
+    \path (topleft)--(topright) coordinate[midway] (group center);
+    \node[align=center,above,yshift=.8cm] at(group center) {\pgfplotslegendfromname{usageLegend}};
+\end{tikzpicture}
