@@ -14,7 +14,7 @@
 
 % \pdfoutput=1 %uncomment to ensure pdflatex processing (mandatatory e.g. to submit to arXiv)
 \hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
-% \nolinenumbers
+\nolinenumbers
 
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
@@ -49,7 +49,7 @@
 
 %\titlerunning{Dummy short title} %TODO optional, please use if title is longer than one line
 
-\author{Paul Hegenberg}{Karlsruher Institut für Technologie, Germany \and \url{https://blog.hegenberg.dev} }{urlgh@student.kit.edu}{}{}%TODO mandatory, please use full name; only 1 author per \author macro; first two parameters are mandatory, other parameters can be empty. Please provide at least the name of the affiliation and the country. The full address is optional. Use additional curly braces to indicate the correct name splitting when the last name consists of multiple name parts.
+\author{Paul Hegenberg}{Karlsruher Institut für Technologie, Germany \and \url{https://github.com/paulheg/kit_advanced_data_structures}}{urlgh@student.kit.edu}{}{}%TODO mandatory, please use full name; only 1 author per \author macro; first two parameters are mandatory, other parameters can be empty. Please provide at least the name of the affiliation and the country. The full address is optional. Use additional curly braces to indicate the correct name splitting when the last name consists of multiple name parts.
 
 \authorrunning{P. Open Access and P. Public} %TODO mandatory. First: Use abbreviated first/middle names. Second (only in severe cases): Use first author plus 'et al.'
 
@@ -106,7 +106,7 @@ execution scales logarithmic, with variations in speed depending on CPU architec
 \end{abstract}
 
 \section{Algorithm}
-In the following section we will present a datastructure
+In the following section we will present a data structure
 that implements \code{rank}, \code{select} and \code{access} operations.
 The data structure aims to use the CPU cache as efficiently as possible, by interleaving both
 vector information and metadata to fit in the same cache line of 512 bit.
@@ -250,6 +250,10 @@ slower in comparison to the Intel setup.
 % \bibliography{lipics-v2021-sample-article}
 
 \appendix
+
+\section{Code}
+The code for this implementation can be found on Github in the following repository: 
+\url{https://github.com/paulheg/kit_advanced_data_structures}.
 
 
 
