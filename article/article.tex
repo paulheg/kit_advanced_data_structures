@@ -14,7 +14,7 @@
 
 % \pdfoutput=1 %uncomment to ensure pdflatex processing (mandatatory e.g. to submit to arXiv)
 \hideLIPIcs  %uncomment to remove references to LIPIcs series (logo, DOI, ...), e.g. when preparing a pre-final version to be uploaded to arXiv or another public repository
-\nolinenumbers
+% \nolinenumbers
 
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
@@ -106,10 +106,10 @@ execution scales logarithmic, with variations in speed depending on CPU architec
 \end{abstract}
 
 \section{Algorithm}
-In the following section we will present an interleaved datastructure
+In the following section we will present a datastructure
 that implements \code{rank}, \code{select} and \code{access} operations.
-The interleaved data structure aims to use the CPU cache as efficiently as possible, where both
-vector information and metadata should fit in the same cache line of 512 bit.
+The data structure aims to use the CPU cache as efficiently as possible, by interleaving both
+vector information and metadata to fit in the same cache line of 512 bit.
 Our bit vector implementation consists of \code{uint64} blocks, of which we can fit 8 inside one cache line
 $L_i = (\prevsum, \vec{v}_0, \dots, \vec{v}_6)$.
 To speed up the computation of rank and select we need metadata, which we store in the first
@@ -224,7 +224,7 @@ To validate these predictions we conducted an experiment were a bitvector $\vec{
 size was randomly generated as well as a fixed amount of $100 000$ commands.
 We then measured the runtime for the pre-computation as well as the command execution.
 In Figure~\ref{fig:performance_eval} the recorded data is visualized.
-\begin{figure}[htbp]
+\begin{figure}[t]
     \centering
     \input{images/benchmark.tex}
     \caption{%
@@ -232,8 +232,7 @@ In Figure~\ref{fig:performance_eval} the recorded data is visualized.
         The benchmark was run on both:
         a 12th Gen Intel® Core™ i5-1240P × 16 with 32 GiB RAM, 1 TB SSD running Fedora Linux 40
         and on a dedicated vCPU Server (Hetzner CCX33) with 
-        8 Cores, 32 GiB RAM and 240 GiB SSD running on AMD Milan EPYC™ 7003 or AMD Genoa EPYC™ 9654
-        running Ubuntu 24.04.
+        8 Cores, 32 GiB RAM and 240 GiB SSD running on AMD Milan EPYC™ 7003 running Ubuntu 24.04.
     }
     \label{fig:performance_eval}
 \end{figure}
